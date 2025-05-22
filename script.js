@@ -6,6 +6,15 @@
             board[index] = mark;
         }
     }
+    const displayBoard = () => {
+        console.log('\n');
+        console.log(`${board[0]} | ${board[1]} | ${board[2]}`);
+        console.log('...........');
+        console.log(`${board[3]} | ${board[4]} | ${board[5]}`);
+        console.log('...........');
+        console.log(`${board[6]} | ${board[7]} | ${board[8]}`);
+        console.log('\n');
+    }
     const clearBoard = () => board = ['', '', '', '', '', '', '', '', ''];
     return { getGameBoard, updateBoard, clearBoard };
 })();
@@ -52,5 +61,33 @@ function createPlayer(name, marker) {
             return move;
         }
     };
-
+    const startGame = (player1Name, player2Name) => {
+        player1 = createPlayer(player1Name, 'X');
+        player2 = createPlayer(player2Name, 'O');
+        currentPlayer = player1;
+        gameOver = false;
+        gameBoard.clearBoard();
+        while (!gameOver) {
+            gameBoard.displayBoard();
+            const move = getPlayerMove();
+            const moveSuccessful = gameBoard.updateBoard(move, currentPlayer.getMarker());
+            if (moveSuccessful) {
+                const currentBoard = gameBoard.getGameBoard();
+                if (checkWin(currentBoard, currentPlayer.getMarker())) {
+                    gameBoard.displayBoard();
+                    console.log(`${currentPlayer.getName()} won`);
+                }
+                else if (checkDraw(currentBoard)) {
+                    gameBoard.displayBoard();
+                    console.log(`No winner this time!!!`);
+                    gameOver = true;
+                }
+                else {
+                    switchPlayer();
+                }
+            }
+        }
+        console.log(`Game over!`);
+    };
+    return { startGame };
 })();
