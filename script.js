@@ -95,17 +95,27 @@ const gameController = (function () {
     return { startGame };
 })();
 
+const getDom = (() => {
+    let form = document.querySelector('form');
+    let firstPlayer = document.querySelector('#Player1');
+    let secondPlayer = document.querySelector('#Player2');
+    let submitUserInfo = document.querySelector('#submit_info')
+    let gameDisplay = document.querySelector('.game_container');
+    let gameTiles = document.querySelectorAll('.game_tiles')
+    return { firstPlayer, secondPlayer, submitUserInfo, form, gameDisplay, gameTiles };
+
+})();
 function init() {
-    const player1GameName = prompt("Enter player 1's game name");
-    const player2GameName = prompt("Enter player 2's game name");
-    if (player1GameName.trim() === "" || player1GameName === null &&
-        player2GameName.trim() === '' || player2GameName === null) {
-        console.log('Players game name cannot be empty');
-        return;
-    }
-    else {
-        gameController.startGame(player1GameName, player2GameName);
-    }
+    getDom.submitUserInfo.addEventListener('click', (event) => {
+        event.preventDefault();
+        const player1GameName = getDom.firstPlayer.value;
+        const player2GameName = getDom.secondPlayer.value;
+        if (player1GameName.trim() !== '' && player2GameName.trim() !== '') {
+            getDom.form.style.display = 'none';
+            getDom.gameDisplay.style.display = 'grid';
+        }
+
+    })
 };
 
 init();
