@@ -1,5 +1,5 @@
-(function gameBoard() {
-    const board = ['', '', '', '', '', '', '', '', ''];
+const gameBoard = (function () {
+    let board = ['', '', '', '', '', '', '', '', ''];
     const getGameBoard = () => [...board];
     const updateBoard = (index, mark) => {
         if (index >= 0 && index < 9 && board[index] === '') {
@@ -16,7 +16,7 @@
         console.log('\n');
     }
     const clearBoard = () => board = ['', '', '', '', '', '', '', '', ''];
-    return { getGameBoard, updateBoard, clearBoard };
+    return { getGameBoard, updateBoard, clearBoard, displayBoard };
 })();
 
 function createPlayer(name, marker) {
@@ -25,7 +25,7 @@ function createPlayer(name, marker) {
     return { getName, getMarker };
 }
 
-(function gameController() {
+const gameController = (function () {
     let player1;
     let player2;
     let currentPlayer;
@@ -50,7 +50,11 @@ function createPlayer(name, marker) {
         let move;
         let isValidMove = false;
         while (!isValidMove) {
-            const moveInput = prompt(`${currentPlayer.name}, enter your move (1-9)`);
+            const moveInput = prompt(`${currentPlayer.getName()}, enter your move (1-9)`);
+            if (moveInput === null || moveInput.trim() === '') {
+                console.log('Please enter a value between 1 - 9.')
+                continue;
+            }
             move = parseInt(moveInput, 10) - 1;
             if (isNaN(move) || move < 0 || move > 8 || gameBoard.getGameBoard()[move] !== '') {
                 console.log('Invalid move.')
@@ -70,24 +74,38 @@ function createPlayer(name, marker) {
         while (!gameOver) {
             gameBoard.displayBoard();
             const move = getPlayerMove();
-            const moveSuccessful = gameBoard.updateBoard(move, currentPlayer.getMarker());
-            if (moveSuccessful) {
-                const currentBoard = gameBoard.getGameBoard();
-                if (checkWin(currentBoard, currentPlayer.getMarker())) {
-                    gameBoard.displayBoard();
-                    console.log(`${currentPlayer.getName()} won`);
-                }
-                else if (checkDraw(currentBoard)) {
-                    gameBoard.displayBoard();
-                    console.log(`No winner this time!!!`);
-                    gameOver = true;
-                }
-                else {
-                    switchPlayer();
-                }
+            gameBoard.updateBoard(move, currentPlayer.getMarker());
+            const currentBoardState = gameBoard.getGameBoard();
+            if (checkWin(currentBoardState, currentPlayer.getMarker())) {
+                gameBoard.displayBoard();
+                console.log(`${currentPlayer.getName()} won`);
+                gameOver = true;
+            }
+            else if (checkDraw(currentBoardState)) {
+                gameBoard.displayBoard();
+                console.log(`No winner this time!!!`);
+                gameOver = true;
+            }
+            else {
+                switchPlayer();
             }
         }
         console.log(`Game over!`);
     };
     return { startGame };
 })();
+
+function init() {
+    const player1GameName = prompt("Enter player 1's game name");
+    const player2GameName = prompt("Enter player 2's game name");
+    if (player1GameName.trim() === "" || player1GameName === null &&
+        player2GameName.trim() === '' || player2GameName === null) {
+        console.log('Players game name cannot be empty');
+        return;
+    }
+    else {
+        gameController.startGame(player1GameName, player2GameName);
+    }
+};
+
+init();
