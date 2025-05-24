@@ -4,19 +4,12 @@ const gameBoard = (function () {
     const updateBoard = (index, mark) => {
         if (index >= 0 && index < 9 && board[index] === '') {
             board[index] = mark;
+            return true;
         }
-    }
-    const displayBoard = () => {
-        console.log('\n');
-        console.log(`${board[0]} | ${board[1]} | ${board[2]}`);
-        console.log('...........');
-        console.log(`${board[3]} | ${board[4]} | ${board[5]}`);
-        console.log('...........');
-        console.log(`${board[6]} | ${board[7]} | ${board[8]}`);
-        console.log('\n');
-    }
+        return false;
+    };
     const clearBoard = () => board = ['', '', '', '', '', '', '', '', ''];
-    return { getGameBoard, updateBoard, clearBoard, displayBoard };
+    return { getGameBoard, updateBoard, clearBoard };
 })();
 
 function createPlayer(name, marker) {
@@ -29,93 +22,94 @@ const gameController = (function () {
     let player1;
     let player2;
     let currentPlayer;
-    let gameOver;
+    let gameOver = false;
 
     const winningCombo = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8],//row combo
-        [0, 3, 6], [1, 4, 7], [2, 5, 8],//column combo
-        [0, 4, 8], [2, 4, 6] //diagonal combo
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
     ];
+
     const checkWin = (boardToCheck, playerMarker) => {
-        return winningCombo.some(combo => {
-            return combo.every(index => boardToCheck[index] === playerMarker);
-        });
-    };
-    const checkDraw = (boardToCheck => !boardToCheck.includes(''));
-    const switchPlayer = () => {
-        currentPlayer = (currentPlayer === player1) ? player2 : player1
+        return winningCombo.some(combo =>
+            combo.every(index => boardToCheck[index] === playerMarker)
+        );
     };
 
-    const getPlayerMove = () => {
-        let move;
-        let isValidMove = false;
-        while (!isValidMove) {
-            const moveInput = prompt(`${currentPlayer.getName()}, enter your move (1-9)`);
-            if (moveInput === null || moveInput.trim() === '') {
-                console.log('Please enter a value between 1 - 9.')
-                continue;
-            }
-            move = parseInt(moveInput, 10) - 1;
-            if (isNaN(move) || move < 0 || move > 8 || gameBoard.getGameBoard()[move] !== '') {
-                console.log('Invalid move.')
-            }
-            else {
-                isValidMove = true;
-            }
-            return move;
-        }
+    const checkDraw = (boardToCheck) => !boardToCheck.includes('');
+
+    const switchPlayer = () => {
+        currentPlayer = (currentPlayer === player1) ? player2 : player1;
     };
+
     const startGame = (player1Name, player2Name) => {
         player1 = createPlayer(player1Name, 'X');
         player2 = createPlayer(player2Name, 'O');
         currentPlayer = player1;
         gameOver = false;
         gameBoard.clearBoard();
-        while (!gameOver) {
-            gameBoard.displayBoard();
-            const move = getPlayerMove();
-            gameBoard.updateBoard(move, currentPlayer.getMarker());
-            const currentBoardState = gameBoard.getGameBoard();
-            if (checkWin(currentBoardState, currentPlayer.getMarker())) {
-                gameBoard.displayBoard();
-                console.log(`${currentPlayer.getName()} won`);
-                gameOver = true;
-            }
-            else if (checkDraw(currentBoardState)) {
-                gameBoard.displayBoard();
-                console.log(`No winner this time!!!`);
-                gameOver = true;
-            }
-            else {
-                switchPlayer();
-            }
-        }
-        console.log(`Game over!`);
+        getDom.form.style.display = 'none';
+        getDom.gameDisplay.style.display = 'grid';
+        getDom.gameTiles.forEach(tiles => tiles.textContent = '');
     };
-    return { startGame };
+
+    const handleTileClick = (index, tile) => {
+        if (tile.textContent !== '' || gameOver) return;
+        tile.textContent = currentPlayer.getMarker();
+        const moveAccepted = gameBoard.updateBoard(index, currentPlayer.getMarker());
+        if (!moveAccepted) return;
+
+        const currentBoardState = gameBoard.getGameBoard();
+        if (checkWin(currentBoardState, currentPlayer.getMarker())) {
+            alert(`${currentPlayer.getName()} won`);
+            gameOver = true;
+            resetGame();
+        } else if (checkDraw(currentBoardState)) {
+            alert(`No winner this time!`);
+            gameOver = true;
+            resetGame();
+        } else {
+            switchPlayer();
+        }
+    };
+
+    const resetGame = () => {
+        getDom.gameTiles.forEach(tile => tile.textContent = '');
+        getDom.gameDisplay.style.display = 'none';
+        getDom.form.style.display = 'flex';
+    };
+
+    return { startGame, handleTileClick };
 })();
 
 const getDom = (() => {
-    let form = document.querySelector('form');
-    let firstPlayer = document.querySelector('#Player1');
-    let secondPlayer = document.querySelector('#Player2');
-    let submitUserInfo = document.querySelector('#submit_info')
-    let gameDisplay = document.querySelector('.game_container');
-    let gameTiles = document.querySelectorAll('.game_tiles')
-    return { firstPlayer, secondPlayer, submitUserInfo, form, gameDisplay, gameTiles };
-
+    const form = document.querySelector('form');
+    const firstPlayer = document.querySelector('#Player1');
+    const secondPlayer = document.querySelector('#Player2');
+    const gameDisplay = document.querySelector('.game_container');
+    const gameTiles = document.querySelectorAll('.game_tiles');
+    return { firstPlayer, secondPlayer, form, gameDisplay, gameTiles };
 })();
+
 function init() {
-    getDom.submitUserInfo.addEventListener('click', (event) => {
+    getDom.form.addEventListener('submit', (event) => {
         event.preventDefault();
         const player1GameName = getDom.firstPlayer.value;
         const player2GameName = getDom.secondPlayer.value;
         if (player1GameName.trim() !== '' && player2GameName.trim() !== '') {
-            getDom.form.style.display = 'none';
-            getDom.gameDisplay.style.display = 'grid';
+            gameController.startGame(player1GameName, player2GameName);
+            getDom.firstPlayer.value = '';
+            getDom.secondPlayer.value = '';
+        } else {
+            alert("Please enter both players' names.");
         }
+    });
 
-    })
-};
+    getDom.gameTiles.forEach((tile, index) => {
+        tile.addEventListener('click', () => {
+            gameController.handleTileClick(index, tile);
+        });
+    });
+}
 
 init();
