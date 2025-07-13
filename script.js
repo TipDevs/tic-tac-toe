@@ -1,113 +1,157 @@
-const gameBoard = (function () {
-    let board = ['', '', '', '', '', '', '', '', ''];
-    const getGameBoard = () => [...board];
-    const updateBoard = (index, mark) => {
-        if (index >= 0 && index < 9 && board[index] === '') {
-            board[index] = mark;
+class Player {
+    constructor(name, marker) {
+        this.name = name;
+        this.marker = marker;
+    }
+    getName() {
+        return this.name;
+    }
+    getMarker() {
+        return this.marker;
+    }
+}
+
+class GameBoard {
+    constructor() {
+        this.board = ['', '', '', '', '', '', '', '', ''];
+    }
+    getBoard() {
+        return [...this.board]
+    }
+    updateBoard(index, marker) {
+        if (index >= 0 && index < 9 && this.board[index] === '') {
+            this.board[index] = marker;
             return true;
         }
         return false;
-    };
-    const clearBoard = () => board = ['', '', '', '', '', '', '', '', ''];
-    return { getGameBoard, updateBoard, clearBoard };
-})();
-
-function createPlayer(name, marker) {
-    const getName = () => name;
-    const getMarker = () => marker;
-    return { getName, getMarker };
+    }
+    clearBoard() {
+        this.board = ['', '', '', '', '', '', '', '', ''];
+    }
 }
 
-const gameController = (function () {
-    let player1;
-    let player2;
-    let currentPlayer;
-    let gameOver = false;
-
-    const winningCombo = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8],
-        [0, 3, 6], [1, 4, 7], [2, 5, 8],
-        [0, 4, 8], [2, 4, 6]
-    ];
-
-    const checkWin = (boardToCheck, playerMarker) => {
-        return winningCombo.some(combo =>
-            combo.every(index => boardToCheck[index] === playerMarker)
-        );
-    };
-
-    const checkDraw = (boardToCheck) => !boardToCheck.includes('');
-
-    const switchPlayer = () => {
-        currentPlayer = (currentPlayer === player1) ? player2 : player1;
-    };
-
-    const startGame = (player1Name, player2Name) => {
-        player1 = createPlayer(player1Name, 'X');
-        player2 = createPlayer(player2Name, 'O');
-        currentPlayer = player1;
-        gameOver = false;
-        gameBoard.clearBoard();
-        getDom.form.style.display = 'none';
-        getDom.gameDisplay.style.display = 'grid';
-        getDom.gameTiles.forEach(tiles => tiles.textContent = '');
-    };
-
-    const handleTileClick = (index, tile) => {
-        if (tile.textContent !== '' || gameOver) return;
-        tile.textContent = currentPlayer.getMarker();
-        const moveAccepted = gameBoard.updateBoard(index, currentPlayer.getMarker());
-        if (!moveAccepted) return;
-
-        const currentBoardState = gameBoard.getGameBoard();
-        if (checkWin(currentBoardState, currentPlayer.getMarker())) {
-            alert(`${currentPlayer.getName()} won`);
-            gameOver = true;
-            resetGame();
-        } else if (checkDraw(currentBoardState)) {
-            alert(`No winner this time!`);
-            gameOver = true;
-            resetGame();
-        } else {
-            switchPlayer();
-        }
-    };
-
-    const resetGame = () => {
-        getDom.gameTiles.forEach(tile => tile.textContent = '');
-        getDom.gameDisplay.style.display = 'none';
-        getDom.form.style.display = 'flex';
-    };
-
-    return { startGame, handleTileClick };
-})();
-
-const getDom = (() => {
+const UIHandler = (function () {
     const form = document.querySelector('form');
     const firstPlayer = document.querySelector('#Player1');
     const secondPlayer = document.querySelector('#Player2');
     const gameDisplay = document.querySelector('.game_container');
     const gameTiles = document.querySelectorAll('.game_tiles');
-    return { firstPlayer, secondPlayer, form, gameDisplay, gameTiles };
+
+    const updateTiles = (index, marker) => {
+        gameTiles[index].textContent = marker;
+    };
+    const resetTiles = () => {
+        gameTiles.forEach(tile => tile.textContent = "");
+    };
+    const toggleGameDisplay = (show) => {
+        form.style.display = show ? "none" : "flex";
+        gameDisplay.style.display = show ? "grid" : "none";
+        console.log(form, gameDisplay);
+
+    };
+    const showWinner = (playerName) => {
+        alert(`${playerName} won the game!`);
+    };
+    const showDraw = () => {
+        alert(`It's a draw!`);
+    };
+
+    // PubSub subscriptions
+    PubSub.subscribe("tile.updated", (msg, data) => {
+        updateTiles(data.index, data.marker);
+    });
+    PubSub.subscribe("game.won", (msg, playerName) => {
+        showWinner(playerName);
+        toggleGameDisplay(false);
+    });
+    PubSub.subscribe("game.draw", () => {
+        showDraw();
+        toggleGameDisplay(false);
+    });
+
+    return {
+        form, firstPlayer, secondPlayer, gameTiles, resetTiles, toggleGameDisplay
+    };
 })();
 
-function init() {
-    getDom.form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const player1GameName = getDom.firstPlayer.value;
-        const player2GameName = getDom.secondPlayer.value;
-        if (player1GameName.trim() !== '' && player2GameName.trim() !== '') {
-            gameController.startGame(player1GameName, player2GameName);
-            getDom.firstPlayer.value = '';
-            getDom.secondPlayer.value = '';
+
+class GameLogic {
+    constructor(board) {
+        this.board = board;
+        this.player1;
+        this.player2;
+        this.currentPlayer;
+        this.gameOver = false;
+        this.winningCombo = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+    }
+
+    startGame(player1Name, player2Name) {
+        this.player1 = new Player(player1Name, "X");
+        this.player2 = new Player(player2Name, "O");
+        this.currentPlayer = this.player1;
+        this.gameOver = false;
+        this.board.clearBoard();
+        UIHandler.resetTiles();
+        UIHandler.toggleGameDisplay(true);
+    }
+
+    switchPlayer() {
+        this.currentPlayer = (this.currentPlayer === this.player1) ? this.player2 : this.player1;
+    }
+
+    checkWin() {
+        return this.winningCombo.some(combo =>
+            combo.every(index => this.board.getBoard()[index] === this.currentPlayer.getMarker())
+        );
+    }
+
+    checkDraw() {
+        return !this.board.getBoard().includes('');
+    }
+
+    handleTileClick(index) {
+        if (this.board.getBoard()[index] !== "" || this.gameOver) return;
+
+        this.board.updateBoard(index, this.currentPlayer.getMarker());
+        PubSub.publish("tile.updated", { index, marker: this.currentPlayer.getMarker() });
+
+        if (this.checkWin()) {
+            PubSub.publish("game.won", this.currentPlayer.getName());
+            this.gameOver = true;
+        } else if (this.checkDraw()) {
+            PubSub.publish("game.draw");
+            this.gameOver = true;
         } else {
-            alert("Please enter both players' names.");
+            this.switchPlayer();
+        }
+    }
+}
+
+
+function init() {
+    const board = new GameBoard();
+    const game = new GameLogic(board);
+
+    UIHandler.form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const player1Name = UIHandler.firstPlayer.value.trim();
+        const player2Name = UIHandler.secondPlayer.value.trim();
+        if (player1Name && player2Name) {
+            game.startGame(player1Name, player2Name);
+            UIHandler.firstPlayer.value = "";
+            UIHandler.secondPlayer.value = "";
+        } else {
+            alert("Please enter both player names!");
         }
     });
 
-    getDom.gameTiles.forEach((tile, index) => {
-        tile.addEventListener('click', () => {
-            gameController.handleTileClick(index, tile);
+    UIHandler.gameTiles.forEach((tile, index) => {
+        tile.addEventListener("click", () => {
+            game.handleTileClick(index);
         });
     });
 }
